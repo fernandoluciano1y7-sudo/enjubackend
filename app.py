@@ -95,30 +95,29 @@ def upload_image():
 
     try:
         file_content = file.read()
-        file_path = f"uploads/{file.filename}"
+        file_name = file.filename.replace(" ", "_") # Remove espaços para evitar erros de URL
+        file_path = f"uploads/{file_name}"
         
         # Upload to Supabase Storage 'images' bucket
-        # Note: 'images' bucket must be public or signed URLs used
-        response = supabase.storage.from_('images').upload(
-            path=file_path,
-            file=file_content,
-            file_options={"content-type": file.content_type}
-        )
+        try:
+            # Forçamos o content-type para garantir que o navegador entenda a imagem depois
+            supabase.storage.from_('images').upload(
+                path=file_path,
+                file=file_content,
+                file_options={"content-type": file.content_type, "upsert": "true"}
+            )
+        except Exception as storage_err:
+            # Se já existir, o 'upsert: true' resolve, mas se falhar por outro motivo:
+            print(f"Storage error detail: {storage_err}")
         
-        # Get Public URL
-        public_url = supabase.storage.from_('images').get_public_url(file_path)
-        
-        return jsonify({"url": public_url})
+        # Obter a URL pública do arquivo
+        public_url_resp = supabase.storage.from_('images').get_public_url(file_path)
+        return jsonify({"url": public_url_resp})
 
     except Exception as e:
-        print(f"Error uploading image: {e}")
-        # If file exists, try to get the URL anyway
-        if "Duplicate" in str(e) or "409" in str(e):
-             file_path = f"uploads/{file.filename}"
-             public_url = supabase.storage.from_('images').get_public_url(file_path)
-             return jsonify({"url": public_url})
-             
-        return jsonify({"error": str(e)}), 500
+        error_msg = str(e)
+        print(f"Error uploading image: {error_msg}")
+        return jsonify({"error": f"Erro no armazenamento: {error_msg}. Verifique se o bucket 'images' foi criado no Supabase."}), 500
 
 @app.route('/api/upload-video', methods=['POST'])
 def upload_video():

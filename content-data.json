@@ -1,0 +1,73 @@
+{
+  "header": {
+    "logo": {
+      "image": "https://i.ibb.co/s9nwS3v6/Screenshot-20251010-173357-Instagram.png",
+      "text": "Enju",
+      "subtext": "Tours"
+    },
+    "navigation": [
+      { "label": "Home", "href": "#home" },
+      { "label": "Pacotes", "href": "#pacotes" },
+      { "label": "Aventuras", "href": "#aventuras" },
+      { "label": "Sobre Nós", "href": "#sobre" }
+    ],
+    "bookButton": "Reservar Agora"
+  },
+  "hero": {
+    "tagline": "ECOTURISMO & AVENTURA",
+    "title": "EXPLORE",
+    "titleHighlight": "ANGOLA",
+    "titleSuffix": "CONNOSCO",
+    "description": "Agência de turismo focada em atividades e pacotes por Angola, oferecendo experiências inesquecíveis na natureza, com a segurança que você precisa.",
+    "mainImage": "https://i.ibb.co/s9nwS3v6/Screenshot-20251010-173357-Instagram.png",
+    "stats": [
+      {
+        "image": "https://i.ibb.co/s9nwS3v6/Screenshot-20251010-173357-Instagram.png",
+        "number": "100+",
+        "label": "Roteiros Únicos"
+      },
+      {
+        "image": "https://i.ibb.co/s9nwS3v6/Screenshot-20251010-173357-Instagram.png",
+        "number": "4",
+        "label": "Tipos de Aventuras"
+      },
+      {
+        "image": "https://i.ibb.co/s9nwS3v6/Screenshot-20251010-173357-Instagram.png",
+        "number": "Desde 2018",
+        "label": "Nossa História"
+      }
+    ]
+  },
+  "gallery": {
+    "title": "Galeria de Viagens",
+    "subtitle": "Momentos capturados em algumas das nossas aventuras e roteiros.",
+    "items": []
+  },
+  "packages": {
+    "title": "Descubra as Maravilhas de Angola",
+    "subtitle": "Aventure-se na natureza intocada e na rica cultura Angolana.",
+    "items": []
+  },
+  "footer": {
+    "logo": "Enju Tours",
+    "description": "Agência de Turismo, Ecoturismo e Aventuras por Angola. Sua jornada segura e consciente com a natureza.",
+    "social": {
+      "instagram": "https://www.instagram.com/brouta_tour/",
+      "facebook": "#",
+      "whatsapp": "https://wa.me/244933412292"
+    },
+    "destinations": [
+      { "label": "Kalandula", "href": "#" },
+      { "label": "Tundavala", "href": "#" },
+      { "label": "Kissama", "href": "#" },
+      { "label": "Camping", "href": "#" }
+    ],
+    "support": [
+      { "label": "FAQ", "href": "#" },
+      { "label": "Contato", "href": "#contato" },
+      { "label": "Política de Vistos", "href": "#" },
+      { "label": "Termos e Condições", "href": "#" }
+    ],
+    "copyright": "&copy; 2025 Enju Tour. Todos os direitos reservados."
+  }
+}

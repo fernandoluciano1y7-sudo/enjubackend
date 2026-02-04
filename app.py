@@ -4,6 +4,9 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Load environment variables
 load_dotenv()
@@ -20,6 +23,13 @@ if not url or not key:
     supabase = None
 else:
     supabase: Client = create_client(url, key)
+
+# Cloudinary Setup
+cloudinary.config(
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "drwaal5yo"),
+    api_key = os.environ.get("CLOUDINARY_API_KEY", "319315945712879"),
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET", "rgwuTZMMDTczf5saKGmrVARCb7I")
+)
 
 @app.route('/')
 def home():
@@ -94,38 +104,19 @@ def upload_image():
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        file_content = file.read()
+        # Upload to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            file,
+            folder="enju_tours/images",
+            resource_type="image"
+        )
         
-        # Gera um nome de arquivo seguro usando data e hora para evitar nomes inválidos
-        import time, re
-        timestamp = int(time.time())
-        # Remove qualquer coisa que não seja letra ou número do nome original
-        clean_name = re.sub(r'[^a-zA-Z0-9]', '_', file.filename.split('.')[0])
-        extension = file.filename.split('.')[-1]
-        file_name = f"{clean_name}_{timestamp}.{extension}"
-        
-        file_path = f"uploads/{file_name}"
-        
-        # Upload to Supabase Storage 'images' bucket
-        try:
-            # Forçamos o content-type para garantir que o navegador entenda a imagem depois
-            supabase.storage.from_('images').upload(
-                path=file_path,
-                file=file_content,
-                file_options={"content-type": file.content_type, "upsert": True}
-            )
-        except Exception as storage_err:
-            # Se já existir, o 'upsert: true' resolve, mas se falhar por outro motivo:
-            print(f"Storage error detail: {storage_err}")
-        
-        # Obter a URL pública do arquivo
-        public_url_resp = supabase.storage.from_('images').get_public_url(file_path)
-        return jsonify({"url": public_url_resp})
+        return jsonify({"url": upload_result['secure_url']})
 
     except Exception as e:
         error_msg = str(e)
-        print(f"Error uploading image: {error_msg}")
-        return jsonify({"error": f"Erro no armazenamento: {error_msg}. Verifique se o bucket 'images' foi criado no Supabase."}), 500
+        print(f"Error uploading image to Cloudinary: {error_msg}")
+        return jsonify({"error": f"Erro no Cloudinary: {error_msg}"}), 500
 
 @app.route('/api/upload-video', methods=['POST'])
 def upload_video():
@@ -140,30 +131,19 @@ def upload_video():
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        file_content = file.read()
-        file_path = f"uploads/{file.filename}"
-        
-        # Upload to Supabase Storage 'videos' bucket
-        response = supabase.storage.from_('videos').upload(
-            path=file_path,
-            file=file_content,
-            file_options={"content-type": file.content_type}
+        # Upload to Cloudinary (vidoes)
+        upload_result = cloudinary.uploader.upload(
+            file,
+            folder="enju_tours/videos",
+            resource_type="video"
         )
         
-        # Get Public URL
-        public_url = supabase.storage.from_('videos').get_public_url(file_path)
-        
-        return jsonify({"url": public_url})
+        return jsonify({"url": upload_result['secure_url']})
 
     except Exception as e:
-        print(f"Error uploading video: {e}")
-        # If file exists, try to get the URL anyway
-        if "Duplicate" in str(e) or "409" in str(e):
-             file_path = f"uploads/{file.filename}"
-             public_url = supabase.storage.from_('videos').get_public_url(file_path)
-             return jsonify({"url": public_url})
-             
-        return jsonify({"error": str(e)}), 500
+        error_msg = str(e)
+        print(f"Error uploading video to Cloudinary: {error_msg}")
+        return jsonify({"error": f"Erro no Cloudinary (Video): {error_msg}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

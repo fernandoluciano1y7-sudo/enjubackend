@@ -4,3 +4,4 @@ supabase
 python-dotenv
 gunicorn
 cloudinary
+psycopg2-binary

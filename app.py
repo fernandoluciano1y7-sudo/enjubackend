@@ -1,28 +1,61 @@
 import os
 import json
-from flask import Flask, request, jsonify, send_from_directory
+import time
+import re
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from supabase import create_client, Client
-from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
+# Permitir CORS para o domínio do GitHub Pages e local
 CORS(app)
 
-# Supabase Setup
-url: str = os.environ.get("SUPABASE_URL")
-key: str = os.environ.get("SUPABASE_KEY")
+# Database Connection String (Neon)
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if not url or not key:
-    print("WARNING: Supabase credentials not found in .env file.")
-    supabase = None
-else:
-    supabase: Client = create_client(url, key)
+def get_db_connection():
+    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    return conn
+
+def init_db():
+    """Inicializa a tabela site_content se não existir"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # Criar tabela
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS site_content (
+                id SERIAL PRIMARY KEY,
+                content JSONB NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # Inserir conteúdo inicial se a tabela estiver vazia
+        cur.execute("SELECT COUNT(*) FROM site_content WHERE id = 1")
+        if cur.fetchone()[0] == 0:
+            # Tentar carregar conteúdo inicial do arquivo local
+            try:
+                with open('content-data.json', 'r', encoding='utf-8') as f:
+                    initial_content = json.load(f)
+                cur.execute("INSERT INTO site_content (id, content) VALUES (1, %s)", (json.dumps(initial_content),))
+            except:
+                # Fallback se o arquivo não existir
+                cur.execute("INSERT INTO site_content (id, content) VALUES (1, '{}')")
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
 
 # Cloudinary Setup
 cloudinary.config(
@@ -33,7 +66,7 @@ cloudinary.config(
 
 @app.route('/')
 def home():
-    return jsonify({"status": "Enju Tours API is running", "version": "1.0.0"}), 200
+    return jsonify({"status": "Enju Tours API is running on Neon Postgres", "version": "1.1.0"}), 200
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -46,47 +79,40 @@ def login():
     else:
         return jsonify({"error": "Invalid credentials"}), 401
 
-
 @app.route('/api/content', methods=['GET'])
 def get_content():
-    if not supabase:
-        return jsonify({"error": "Supabase not configured"}), 500
-    
     try:
-        # Check if we verify content from a 'site_content' table
-        # Assuming a simple key-value store or a single row for the whole site JSON
-        response = supabase.table('site_content').select("*").eq('id', 1).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT content FROM site_content WHERE id = 1")
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
         
-        if response.data:
-            return jsonify(response.data[0]['content'])
-        else:
-            # Fallback if DB is empty, try to load local json to bootstrap
-            try:
-                with open('content-data.json', 'r', encoding='utf-8') as f:
-                    local_data = json.load(f)
-                return jsonify(local_data)
-            except Exception as e:
-                return jsonify({"error": "Content not found"}), 404
-
+        if row:
+            return jsonify(row['content'])
+        return jsonify({"error": "Content not found"}), 404
     except Exception as e:
         print(f"Error fetching content: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/content', methods=['POST'])
 def save_content():
-    if not supabase:
-        return jsonify({"error": "Supabase not configured"}), 500
-    
     new_content = request.json
-    
     try:
-        # Upsert content (assuming ID 1 is the main site content)
-        data = {
-            "id": 1,
-            "content": new_content
-        }
-        response = supabase.table('site_content').upsert(data).execute()
-        return jsonify({"message": "Content saved successfully", "data": response.data})
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # Usar ON CONFLICT para atualizar se já existir o ID 1
+        cur.execute("""
+            INSERT INTO site_content (id, content) 
+            VALUES (1, %s) 
+            ON CONFLICT (id) 
+            DO UPDATE SET content = EXCLUDED.content, created_at = CURRENT_TIMESTAMP
+        """, (json.dumps(new_content),))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"message": "Content saved successfully to Neon"})
     except Exception as e:
         print(f"Error saving content: {e}")
         return jsonify({"error": str(e)}), 500
@@ -101,7 +127,6 @@ def upload_image():
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        # Upload to Cloudinary - SEM DEPENDÊNCIA DE SUPABASE STORAGE
         upload_result = cloudinary.uploader.upload(
             file,
             folder="enju_tours/images",
@@ -122,7 +147,6 @@ def upload_video():
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        # Upload to Cloudinary (video)
         upload_result = cloudinary.uploader.upload(
             file,
             folder="enju_tours/videos",
@@ -134,5 +158,6 @@ def upload_video():
         return jsonify({"error": f"Erro no Cloudinary (Video): {str(e)}"}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    init_db()
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)

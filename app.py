@@ -95,7 +95,15 @@ def upload_image():
 
     try:
         file_content = file.read()
-        file_name = file.filename.replace(" ", "_") # Remove espaços para evitar erros de URL
+        
+        # Gera um nome de arquivo seguro usando data e hora para evitar nomes inválidos
+        import time, re
+        timestamp = int(time.time())
+        # Remove qualquer coisa que não seja letra ou número do nome original
+        clean_name = re.sub(r'[^a-zA-Z0-9]', '_', file.filename.split('.')[0])
+        extension = file.filename.split('.')[-1]
+        file_name = f"{clean_name}_{timestamp}.{extension}"
+        
         file_path = f"uploads/{file_name}"
         
         # Upload to Supabase Storage 'images' bucket

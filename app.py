@@ -93,9 +93,6 @@ def save_content():
 
 @app.route('/api/upload', methods=['POST'])
 def upload_image():
-    if not supabase:
-        return jsonify({"error": "Supabase not configured"}), 500
-
     if 'image' not in request.files:
         return jsonify({"error": "No image part"}), 400
         
@@ -104,25 +101,19 @@ def upload_image():
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        # Upload to Cloudinary
+        # Upload to Cloudinary - SEM DEPENDÊNCIA DE SUPABASE STORAGE
         upload_result = cloudinary.uploader.upload(
             file,
             folder="enju_tours/images",
             resource_type="image"
         )
-        
         return jsonify({"url": upload_result['secure_url']})
-
     except Exception as e:
-        error_msg = str(e)
-        print(f"Error uploading image to Cloudinary: {error_msg}")
-        return jsonify({"error": f"Erro no Cloudinary: {error_msg}"}), 500
+        print(f"Cloudinary error: {e}")
+        return jsonify({"error": f"Erro no Cloudinary: {str(e)}"}), 500
 
 @app.route('/api/upload-video', methods=['POST'])
 def upload_video():
-    if not supabase:
-        return jsonify({"error": "Supabase not configured"}), 500
-
     if 'video' not in request.files:
         return jsonify({"error": "No video part"}), 400
         
@@ -131,19 +122,16 @@ def upload_video():
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        # Upload to Cloudinary (vidoes)
+        # Upload to Cloudinary (video)
         upload_result = cloudinary.uploader.upload(
             file,
             folder="enju_tours/videos",
             resource_type="video"
         )
-        
         return jsonify({"url": upload_result['secure_url']})
-
     except Exception as e:
-        error_msg = str(e)
-        print(f"Error uploading video to Cloudinary: {error_msg}")
-        return jsonify({"error": f"Erro no Cloudinary (Video): {error_msg}"}), 500
+        print(f"Cloudinary video error: {e}")
+        return jsonify({"error": f"Erro no Cloudinary (Video): {str(e)}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

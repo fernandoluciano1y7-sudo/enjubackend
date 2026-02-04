@@ -104,7 +104,7 @@ def upload_image():
             supabase.storage.from_('images').upload(
                 path=file_path,
                 file=file_content,
-                file_options={"content-type": file.content_type, "upsert": "true"}
+                file_options={"content-type": file.content_type, "upsert": True}
             )
         except Exception as storage_err:
             # Se já existir, o 'upsert: true' resolve, mas se falhar por outro motivo:
